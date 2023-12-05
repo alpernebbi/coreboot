@@ -1,6 +1,10 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
 
+#if CONFIG(CPU_QEMU_X86)
 #include <arch/io.h>
+#else
+#include <arch/mmio.h>
+#endif
 #include <console/console.h>
 #include <device/device.h>
 #include <device/mmio.h>
@@ -45,8 +49,10 @@ static int height = CONFIG_DRIVERS_EMULATION_QEMU_BOCHS_YRES;
 static void bochs_write(struct resource *res, int index, int val)
 {
 	if (res->flags & IORESOURCE_IO) {
+#if CONFIG(CPU_QEMU_X86)
 		outw(index, res->base);
 		outw(val, res->base + 1);
+#endif
 	} else {
 		write16(res2mmio(res, 0x500 + index * 2, 0), val);
 	}
@@ -55,8 +61,12 @@ static void bochs_write(struct resource *res, int index, int val)
 static int bochs_read(struct resource *res, int index)
 {
 	if (res->flags & IORESOURCE_IO) {
+#if CONFIG(CPU_QEMU_X86)
 		outw(index, res->base);
 		return inw(res->base + 1);
+#else
+		return 0;
+#endif
 	} else {
 		return read16(res2mmio(res, 0x500 + index * 2, 0));
 	}
@@ -64,9 +74,11 @@ static int bochs_read(struct resource *res, int index)
 
 static void bochs_vga_write(struct resource *res, int index, uint8_t val)
 {
-	if (res->flags & IORESOURCE_IO)
+	if (res->flags & IORESOURCE_IO) {
+#if CONFIG(CPU_QEMU_X86)
 		outb(val, index + 0x3c0);
-	else
+#endif
+	} else
 		write8(res2mmio(res, 0x400 + index, 0), val);
 }
 
@@ -103,7 +115,7 @@ static void bochs_init_linear_fb(struct device *dev)
 
 	/* MMIO bar supported since qemu 3.0+ */
 	res_io = probe_resource(dev, PCI_BASE_ADDRESS_2);
-	if (((dev->class >> 8) == PCI_CLASS_DISPLAY_VGA) ||
+	if ((CONFIG(VGA) && (dev->class >> 8) == PCI_CLASS_DISPLAY_VGA) ||
 	    !res_io || !(res_io->flags & IORESOURCE_MEM)) {
 		printk(BIOS_DEBUG, "QEMU VGA: Using legacy VGA\n");
 		res_io = &res_legacy;
