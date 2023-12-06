@@ -1,0 +1,2 @@
+config BOARD_EMULATION_QEMU_ARMV7_VIRT
+	bool "QEMU armv7 (virt)"

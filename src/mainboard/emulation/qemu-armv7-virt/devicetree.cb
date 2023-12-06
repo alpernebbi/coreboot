@@ -1,0 +1,9 @@
+## SPDX-License-Identifier: GPL-2.0-only
+
+chip mainboard/emulation/qemu-armv7
+	device cpu_cluster 0 on end
+
+	device domain 0 on ops qemu_armv7_pci_domain_ops
+		device pci 00.0 on end
+	end
+end
