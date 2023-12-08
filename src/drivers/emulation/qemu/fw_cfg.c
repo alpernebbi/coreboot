@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <smbios.h>
+#include <symbols.h>
 #include <console/console.h>
 #include <arch/io.h>
 #include <arch/mmio.h>
@@ -72,6 +73,17 @@ static void fw_cfg_read(void *dst, int dstlen)
 			((uint8_t *)dst)[i] = read8((void *)FW_CFG_DATA_ADDR);
 }
 
+static void fw_cfg_skip(int skiplen)
+{
+	if (fw_ver & FW_CFG_VERSION_DMA)
+		fw_cfg_dma(FW_CFG_DMA_CTL_READ, NULL, skiplen);
+	else if (CONFIG(CPU_QEMU_X86))
+		insb(FW_CFG_X86_PORT_DATA, NULL, skiplen);
+	else
+		for (int i = 0; i < skiplen; i++)
+			read8((void *)FW_CFG_DATA_ADDR);
+}
+
 void fw_cfg_get(uint16_t entry, void *dst, int dstlen)
 {
 	fw_cfg_select(entry);
@@ -85,8 +97,10 @@ static int fw_cfg_find_file(FWCfgFile *file, const char *name)
 	fw_cfg_select(FW_CFG_FILE_DIR);
 	fw_cfg_read(&count, sizeof(count));
 	count = be32_to_cpu(count);
+	printk(BIOS_DEBUG, "QEMU: firmware config: Found '%d' files\n", count);
 
 	for (int i = 0; i < count; i++) {
+		printk(BIOS_DEBUG, "QEMU: firmware config: Reading file at index '%d'\n", i);
 		fw_cfg_read(file, sizeof(*file));
 		if (strcmp(file->name, name) == 0) {
 			file->size = be32_to_cpu(file->size);
@@ -94,6 +108,7 @@ static int fw_cfg_find_file(FWCfgFile *file, const char *name)
 			printk(BIOS_INFO, "QEMU: firmware config: Found '%s'\n", name);
 			return 0;
 		}
+		printk(BIOS_DEBUG, "QEMU: firmware config: Skipped '%s'\n", file->name);
 	}
 	printk(BIOS_INFO, "QEMU: firmware config: Couldn't find '%s'\n", name);
 	return -1;
@@ -141,7 +156,108 @@ uintptr_t fw_cfg_tolud(void)
 			if (e.type == 1 && limit < 4ULL * GiB && limit > top)
 				top = limit;
 		}
+		printk(BIOS_DEBUG, "fw_cfg: e820 top = %#llx\n", top);
 	}
+
+	FWCfgFile f;
+	if (fw_cfg_check_file(&f, "etc/smbios/smbios-tables"))
+		return 0;
+
+	uint16_t count = 0;
+	union smbios_entry {
+		struct smbios_header header;
+		struct smbios_type16 as_type16;
+		struct smbios_type17 as_type17;
+		struct smbios_type19 as_type19;
+	} entry;
+
+	unsigned char out[20];
+	fw_cfg_select(f.select);
+	for (count = 0; count <= f.size; count += 16) {
+		fw_cfg_read((void *)out, 16);
+		printk(BIOS_DEBUG, "%08x: %02x%02x %02x%02x %02x%02x %02x%02x %02x%02x %02x%02x %02x%02x %02x%02x\n", count,
+				(unsigned int)out[0], (unsigned int)out[1],
+				(unsigned int)out[2], (unsigned int)out[3],
+				(unsigned int)out[4], (unsigned int)out[5],
+				(unsigned int)out[6], (unsigned int)out[7],
+				(unsigned int)out[8], (unsigned int)out[9],
+				(unsigned int)out[10], (unsigned int)out[11],
+				(unsigned int)out[12], (unsigned int)out[13],
+				(unsigned int)out[14], (unsigned int)out[15]);
+	};
+
+	fw_cfg_select(f.select);
+	while (entry.header.type != SMBIOS_END_OF_TABLE) {
+		printk(BIOS_DEBUG, "fw_cfg: reading header, %d bytes.\n", (int)sizeof(entry.header));
+		fw_cfg_read(&entry.header, sizeof(entry.header));
+		printk(BIOS_DEBUG, "fw_cfg: header type %#x.\n", entry.header.type);
+		printk(BIOS_DEBUG, "fw_cfg: header length %#x.\n", entry.header.length);
+		printk(BIOS_DEBUG, "fw_cfg: header handle %#x.\n", entry.header.handle);
+
+		if (entry.header.type == SMBIOS_MEMORY_ARRAY_MAPPED_ADDRESS) {
+			fw_cfg_read((void *)&entry + sizeof(struct smbios_header),
+					sizeof(struct smbios_type19) - 2 - sizeof(struct smbios_header));
+
+			printk(BIOS_DEBUG, "fw_cfg: MEMORY_ARRAY_MAPPED_ADDRESS!\n");
+			printk(BIOS_DEBUG, "fw_cfg:   start=%#x\n", entry.as_type19.starting_address);
+			printk(BIOS_DEBUG, "fw_cfg:   end=%#x\n", entry.as_type19.ending_address);
+
+			top = ((uint64_t)entry.as_type19.ending_address + 1) * KiB;
+			printk(BIOS_DEBUG, "fw_cfg: top = %#llx\n", top);
+
+		} else if (entry.header.type == SMBIOS_MEMORY_DEVICE) {
+			fw_cfg_read((void *)&entry + sizeof(struct smbios_header),
+					sizeof(struct smbios_type17) - 2 - sizeof(struct smbios_header));
+
+			printk(BIOS_DEBUG, "fw_cfg: MEMORY_DEVICE!\n");
+			printk(BIOS_DEBUG, "fw_cfg:   size=%#x\n", entry.as_type17.size);
+
+#if !CONFIG(CPU_QEMU_X86)
+			top = (uintptr_t)_dram + (uintptr_t)entry.as_type17.size * MiB;
+			printk(BIOS_DEBUG, "fw_cfg: top = %#llx\n", top);
+#endif
+
+		} else if (entry.header.type == SMBIOS_PHYS_MEMORY_ARRAY) {
+			fw_cfg_read((void *)&entry + sizeof(struct smbios_header),
+					sizeof(struct smbios_type16) - 2 - sizeof(struct smbios_header));
+
+			printk(BIOS_DEBUG, "fw_cfg: PHYS_MEMORY_ARRAY!\n");
+			printk(BIOS_DEBUG, "fw_cfg:   maximum_capacity=%#x\n", entry.as_type16.maximum_capacity);
+			printk(BIOS_DEBUG, "fw_cfg:   extended_maximum_capacity=%#llx\n", entry.as_type16.extended_maximum_capacity);
+
+#if !CONFIG(CPU_QEMU_X86)
+			if (entry.as_type16.maximum_capacity == SMBIOS_USE_EXTENDED_MAX_CAPACITY) {
+				top = (uintptr_t)_dram + (uintptr_t)entry.as_type16.extended_maximum_capacity;
+			} else {
+				top = (uintptr_t)_dram + (uintptr_t)entry.as_type16.maximum_capacity * KiB;
+			}
+			printk(BIOS_DEBUG, "fw_cfg: top = %#llx\n", top);
+#endif
+
+		} else if (entry.header.type == 0) {
+			printk(BIOS_DEBUG, "fw_cfg: table end\n");
+			break;
+
+		} else {
+			/* skip to the strings */
+			printk(BIOS_DEBUG, "fw_cfg: skipping %d bytes per length\n",
+				(int)(entry.header.length - sizeof(entry.header)));
+			fw_cfg_skip(entry.header.length - sizeof(entry.header));
+		}
+
+		/* skip strings to the terminator */
+		uint8_t prev = 0xff;
+		uint8_t cur = 0xff;
+		count = 0;
+		while (prev != 0 || cur != 0) {
+			prev = cur;
+			fw_cfg_read(&cur, 1);
+			count += 1;
+			printk(BIOS_DEBUG, "fw_cfg: prev=%#x, cur=%#x\n", prev, cur);
+		}
+		printk(BIOS_DEBUG, "fw_cfg: skipped %d bytes until terminator\n", count);
+	}
+
 	return (uintptr_t)top;
 }
 
