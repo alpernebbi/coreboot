@@ -525,6 +525,16 @@ config PCI
 	bool
 	default n
 
+config PCI_IOBASE
+	hex
+	help
+	  The memory address of a memory-mapped translator that lets the
+	  CPU communicate with peripheral devices over PCI I/O space.
+
+config PCI_IO_SPACE_LIMIT
+	hex
+	default 0xffff
+
 if PCI
 
 config DOMAIN_RESOURCE_32BIT_LIMIT
