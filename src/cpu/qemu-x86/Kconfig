@@ -36,6 +36,7 @@ config MAX_CPUS
 	default 4
 
 config HEAP_SIZE
+	default 0x100000 if BOOTSPLASH
 	default 0x8000
 
 endif
