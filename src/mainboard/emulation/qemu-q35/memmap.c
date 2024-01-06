@@ -7,7 +7,7 @@
 #include <cpu/x86/smm.h>
 #include <device/pci_ops.h>
 #include <mainboard/emulation/qemu-i440fx/memory.h>
-#include <mainboard/emulation/qemu-i440fx/fw_cfg.h>
+#include <fw_cfg.h>
 #include <cpu/intel/smm_reloc.h>
 
 #include "q35.h"

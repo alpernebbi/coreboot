@@ -9,15 +9,13 @@
 #include <device/pci_def.h>
 #include <device/pci_ops.h>
 #include <device/device.h>
+#include <fw_cfg.h>
+#include <fw_cfg_if.h>
 #include <identity.h>
 #include <stdlib.h>
 #include <smbios.h>
 #include <types.h>
 #include "memory.h"
-
-#include "fw_cfg.h"
-#include "fw_cfg_if.h"
-
 #include "acpi.h"
 
 static void qemu_reserve_ports(struct device *dev, unsigned int idx,
