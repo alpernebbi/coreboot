@@ -37,3 +37,11 @@ config DRIVERS_EMULATION_QEMU_YRES
 	default 600
 	depends on LINEAR_FRAMEBUFFER
 	depends on DRIVERS_EMULATION_QEMU_BOCHS || DRIVERS_EMULATION_QEMU_CIRRUS
+
+config DRIVERS_EMULATION_QEMU_FW_CFG
+	bool
+	depends on CPU_QEMU_X86
+	help
+	   Driver for QEMU-specific device that passes various config
+	   information to the firmware including e.g. ACPI and SMBIOS
+	   tables.
