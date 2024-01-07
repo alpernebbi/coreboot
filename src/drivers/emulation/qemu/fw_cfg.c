@@ -11,10 +11,21 @@
 #include <fw_cfg.h>
 #include <fw_cfg_if.h>
 
+#if CONFIG(CPU_QEMU_X86)
 #define FW_CFG_PORT_CTL       0x0510
 #define FW_CFG_PORT_DATA      0x0511
 #define FW_CFG_DMA_ADDR_HIGH  0x0514
 #define FW_CFG_DMA_ADDR_LOW   0x0518
+
+#elif CONFIG_QEMU_FW_CFG_BASE_ADDRESS == 0
+#error "CONFIG_QEMU_FW_CFG_BASE_ADDRESS undefined!"
+
+#else
+#define FW_CFG_CTL_ADDR       (CONFIG_QEMU_FW_CFG_BASE_ADDRESS + 8)
+#define FW_CFG_DATA_ADDR      (CONFIG_QEMU_FW_CFG_BASE_ADDRESS + 0)
+#define FW_CFG_DMA_ADDR_HIGH  (CONFIG_QEMU_FW_CFG_BASE_ADDRESS + 16)
+#define FW_CFG_DMA_ADDR_LOW   (CONFIG_QEMU_FW_CFG_BASE_ADDRESS + 20)
+#endif
 
 static int fw_cfg_detected;
 static uint8_t fw_ver;
@@ -43,7 +54,14 @@ static int fw_cfg_present(void)
 
 static void fw_cfg_select(uint16_t entry)
 {
-	outw(entry, FW_CFG_PORT_CTL);
+	if (fw_ver & FW_CFG_VERSION_DMA)
+		fw_cfg_dma(FW_CFG_DMA_CTL_SELECT | entry << 16, NULL, 0);
+	else
+#if CONFIG(CPU_QEMU_X86)
+		outw(entry, FW_CFG_PORT_CTL);
+#else
+		write16((void *)(uintptr_t)FW_CFG_CTL_ADDR, be16_to_cpu(entry));
+#endif
 }
 
 static void fw_cfg_read(void *dst, int dstlen)
@@ -51,7 +69,12 @@ static void fw_cfg_read(void *dst, int dstlen)
 	if (fw_ver & FW_CFG_VERSION_DMA)
 		fw_cfg_dma(FW_CFG_DMA_CTL_READ, dst, dstlen);
 	else
+#if CONFIG(CPU_QEMU_X86)
 		insb(FW_CFG_PORT_DATA, dst, dstlen);
+#else
+		for (int i = 0; i < dstlen; i++)
+			((unsigned char *)dst)[i] = (unsigned char)read8((void *)(uintptr_t)FW_CFG_DATA_ADDR);
+#endif
 }
 
 void fw_cfg_get(uint16_t entry, void *dst, int dstlen)
@@ -340,6 +363,7 @@ err:
 /* ---------------------------------------------------------------------- */
 /* pick up smbios information from fw_cfg                                 */
 
+#if CONFIG(GENERATE_SMBIOS_TABLES)
 static const char *type1_manufacturer;
 static const char *type1_product_name;
 static const char *type1_version;
@@ -503,6 +527,7 @@ void smbios_system_set_uuid(u8 *uuid)
 	fw_cfg_smbios_init();
 	memcpy(uuid, type1_uuid, 16);
 }
+#endif /* CONFIG(GENERATE_SMBIOS_TABLES) */
 
 /*
  * Configure DMA setup
@@ -523,10 +548,16 @@ static void fw_cfg_dma(int control, void *buf, int len)
 	dma_desc_addr_hi = sizeof(uintptr_t) > sizeof(uint32_t)
 				? (uint32_t)(dma_desc_addr >> 32) : 0;
 
+#if CONFIG(CPU_QEMU_X86)
 	// Skip writing high half if unnecessary.
 	if (dma_desc_addr_hi)
 		outl(be32_to_cpu(dma_desc_addr_hi), FW_CFG_DMA_ADDR_HIGH);
 	outl(be32_to_cpu(dma_desc_addr_lo), FW_CFG_DMA_ADDR_LOW);
+#else
+	if (dma_desc_addr_hi)
+		write32((void *)(uintptr_t)FW_CFG_DMA_ADDR_HIGH, be32_to_cpu(dma_desc_addr_hi));
+	write32((void *)(uintptr_t)FW_CFG_DMA_ADDR_LOW, be32_to_cpu(dma_desc_addr_lo));
+#endif
 
 	while (be32_to_cpu(dma.control) & ~FW_CFG_DMA_CTL_ERROR)
 		;

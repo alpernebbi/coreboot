@@ -2,9 +2,11 @@
 
 #include <cbmem.h>
 #include <symbols.h>
+#include <console/console.h>
 #include <device/device.h>
 #include <bootmem.h>
 #include <mainboard/addressmap.h>
+#include <fw_cfg.h>
 
 void bootmem_platform_add_ranges(void)
 {
@@ -13,6 +15,18 @@ void bootmem_platform_add_ranges(void)
 
 static void mainboard_enable(struct device *dev)
 {
+	FWCfgFile id;
+	unsigned char sig[FW_CFG_SIG_SIZE + 1];
+
+	fw_cfg_get(FW_CFG_SIGNATURE, sig, FW_CFG_SIG_SIZE);
+	sig[FW_CFG_SIG_SIZE] = '\0';
+	printk(BIOS_DEBUG, "fw_cfg signature: %s\n", sig);
+
+	fw_cfg_get(FW_CFG_ID, sig, 4);
+	printk(BIOS_DEBUG, "fw_cfg id: %#0x %#0x %#0x %#0x\n",
+	       sig[0], sig[1], sig[2], sig[3]);
+
+	fw_cfg_check_file(&id, "bootorder");
 }
 
 struct chip_operations mainboard_ops = {

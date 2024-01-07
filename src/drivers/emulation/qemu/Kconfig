@@ -1,11 +1,17 @@
 config DRIVERS_EMULATION_QEMU_FW_CFG
 	bool "QEMU firmware configuration driver"
-	default y
-	depends on CPU_QEMU_X86
+	depends on VENDOR_EMULATION
 	help
 	   Driver for QEMU-specific device that passes various config
 	   information to the firmware including e.g. ACPI and SMBIOS
 	   tables.
+
+config QEMU_FW_CFG_BASE_ADDRESS
+	hex
+	depends on DRIVERS_EMULATION_QEMU_FW_CFG && !ARCH_X86
+	help
+	    Platform dependent base address of the MMIO (and DMA)
+	    registers for the QEMU firmware configuration device.
 
 config DRIVERS_EMULATION_QEMU_BOCHS
 	bool "bochs dispi interface vga driver"
