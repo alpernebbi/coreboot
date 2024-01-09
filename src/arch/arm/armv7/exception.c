@@ -16,6 +16,8 @@ void exception_not_used(uint32_t *);
 void exception_irq(uint32_t *);
 void exception_fiq(uint32_t *);
 
+static uint32_t (*data_abort_handler)(uint32_t *regs) = NULL;
+
 static void dump_stack(uintptr_t addr, size_t bytes)
 {
 	int i, j;
@@ -81,6 +83,11 @@ void exception_prefetch_abort(uint32_t *regs)
 
 void exception_data_abort(uint32_t *regs)
 {
+	if (data_abort_handler && (data_abort_handler(regs) == 0)) {
+		regs[15] += 2;
+		return;
+	}
+
 	printk(BIOS_ERR, "exception _data_abort\n");
 	regs[15] -= 8;
 	print_regs(regs);
@@ -132,4 +139,14 @@ void exception_init(void)
 	exception_stack_end = exception_stack + sizeof(exception_stack);
 
 	printk(BIOS_DEBUG, "Exception handlers installed.\n");
+}
+
+void register_data_abort_handler(uint32_t (*handler)(uint32_t *))
+{
+	data_abort_handler = handler;
+}
+
+void unregister_data_abort_handler(void)
+{
+	data_abort_handler = NULL;
 }

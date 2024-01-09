@@ -18,4 +18,8 @@ bootblock-y += mmio.c
 romstage-y += mmio.c
 ramstage-y += mmio.c
 
+bootblock-y += ramdetect.c
+romstage-y += ramdetect.c
+ramstage-y += ramdetect.c
+
 CPPFLAGS_common += -I$(src)/mainboard/$(MAINBOARDDIR)/include

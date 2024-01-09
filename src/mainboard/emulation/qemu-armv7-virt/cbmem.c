@@ -6,6 +6,5 @@
 
 uintptr_t cbmem_top_chipset(void)
 {
-	return (uintptr_t)_dram + 1 * GiB - 1;
 	return (uintptr_t)_dram + (probe_ramsize((uintptr_t)_dram, CONFIG_DRAM_SIZE_MB) * MiB);
 }
