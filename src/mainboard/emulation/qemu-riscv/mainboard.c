@@ -1,5 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
 
+#include <cbmem.h>
 #include <console/console.h>
 #include <device/device.h>
 #include <symbols.h>
@@ -8,14 +9,6 @@
 
 static void mainboard_enable(struct device *dev)
 {
-	size_t dram_mb_detected;
-
-	if (!dev) {
-		die("No dev0; die\n");
-	}
-
-	dram_mb_detected = probe_ramsize((uintptr_t)_dram, CONFIG_DRAM_SIZE_MB);
-	ram_range(dev, 0, (uintptr_t)_dram, dram_mb_detected * MiB);
 }
 
 struct chip_operations mainboard_ops = {
@@ -45,6 +38,8 @@ static void qemu_riscv_domain_read_resources(struct device *dev)
 	res->flags = IORESOURCE_MEM | IORESOURCE_ASSIGNED;
 
 	mmio_range(dev, index++, QEMU_VIRT_PCIE_ECAM_BASE, QEMU_VIRT_PCIE_ECAM_SIZE);
+
+	ram_from_to(dev, index++, (uintptr_t)_dram, (uintptr_t)cbmem_top());
 }
 
 struct device_operations qemu_riscv_pci_domain_ops = {
