@@ -11,6 +11,7 @@
 #include <string.h>
 #include <stddef.h>
 #include <stdlib.h>
+#include <limits.h>
 
 /*
  * Functions for picking apart flattened trees.
@@ -166,6 +167,101 @@ int fdt_skip_node(const void *blob, uint32_t start_offset)
 	return offset - start_offset + sizeof(uint32_t);
 }
 
+/*
+ * Find top of memory from a flat device-tree.
+ */
+uintptr_t fdt_get_memory_top(const void *blob)
+{
+	struct fdt_property prop;
+	struct fdt_header *header;
+	int size, offset;
+	const char *name;
+
+	header = (struct fdt_header *)blob;
+	if (be32_to_cpu(header->magic) != FDT_HEADER_MAGIC)
+		return 0;
+
+	offset = be32toh(header->structure_offset);
+	size = fdt_node_name(blob, offset, &name);
+	offset += size;
+
+	int addr_cells = 0;
+	int size_cells = 0;
+	while ((size = fdt_next_property(blob, offset, &prop))) {
+		if (!strncmp(prop.name, "#address-cells", sizeof("#address-cells")))
+			addr_cells = be32toh(*(uint32_t *)prop.data);
+		else if (!strncmp(prop.name, "#size-cells", sizeof("#size-cells")))
+			size_cells = be32toh(*(uint32_t *)prop.data);
+
+		offset += size;
+	}
+	if (!addr_cells || !size_cells)
+		return 0;
+
+	/* TODO: Handle multiple memory nodes */
+	uint32_t mem_offset = 0;
+	while ((size = fdt_skip_node(blob, offset))) {
+		fdt_node_name(blob, offset, &name);
+		if (!strncmp(name, "memory", sizeof("memory")) ||
+		    !strncmp(name, "memory@", sizeof("memory@") - 1)) {
+			mem_offset = offset;
+			break;
+		}
+
+		offset += size;
+	}
+	if (!mem_offset)
+		return 0;
+
+	uint32_t reg_size = 0;
+	uint32_t *reg_data = NULL;
+	size = fdt_node_name(blob, mem_offset, &name);
+	offset = mem_offset + size;
+	while ((size = fdt_next_property(blob, offset, &prop))) {
+		offset += size;
+		if (!strncmp(prop.name, "reg", sizeof("reg"))) {
+			reg_data = (uint32_t *)prop.data;
+			reg_size = prop.size;
+			break;
+		}
+	}
+	if (!reg_size || !reg_data)
+		return 0;
+
+	/* TODO: Handle multiple ranges in reg property */
+	int i;
+	uintptr_t mem_base = 0;
+	uintptr_t mem_size = 0;
+	uintptr_t top = 0;
+	for (i = 0; i < addr_cells; i++) {
+		if (i >= (addr_cells - sizeof(uintptr_t) / 4)) {
+			mem_base = (uintptr_t)((uint64_t)mem_base << 32);
+			mem_base |= be32toh(reg_data[i]);
+		} else if (be32toh(reg_data[i])) {
+			mem_base = UINTPTR_MAX;
+			break;
+		}
+	}
+	for (i = 0; i < size_cells; i++) {
+		if (i >= (size_cells - sizeof(uintptr_t) / 4)) {
+			mem_size = (uintptr_t)((uint64_t)mem_size << 32);
+			mem_size |= be32toh(reg_data[addr_cells + i]);
+		} else if (be32toh(reg_data[addr_cells + i])) {
+			mem_size = UINTPTR_MAX;
+			break;
+		}
+	}
+
+	if (mem_size > UINTPTR_MAX - mem_base)
+		top = UINTPTR_MAX;
+	else
+		top = mem_base + mem_size;
+
+	printk(BIOS_DEBUG, "FDT: Found %u MiB of addressable RAM\n",
+	       (uint32_t)((top - mem_base) / MiB));
+
+	return top;
+}
 
 
 /*

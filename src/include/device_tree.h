@@ -100,6 +100,9 @@ int fdt_node_name(const void *blob, uint32_t offset, const char **name);
 void fdt_print_node(const void *blob, uint32_t offset);
 int fdt_skip_node(const void *blob, uint32_t offset);
 
+ /* Find top of memory from a flat device-tree. */
+uintptr_t fdt_get_memory_top(const void *blob);
+
 /* Read a flattened device tree into a hierarchical structure which refers to
    the contents of the flattened tree in place. Modifying the flat tree
    invalidates the unflattened one. */
