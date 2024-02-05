@@ -8,11 +8,6 @@
 
 static void mainboard_enable(struct device *dev)
 {
-	if (!dev) {
-		die("No dev0; die\n");
-	}
-
-	ram_from_to(dev, 0, (uintptr_t)_dram, cbmem_top());
 }
 
 struct chip_operations mainboard_ops = {
@@ -46,6 +41,8 @@ static void qemu_riscv_domain_read_resources(struct device *dev)
 	res->flags = IORESOURCE_MEM | IORESOURCE_ASSIGNED;
 
 	mmconf_resource(dev, index++);
+
+	ram_from_to(dev, index++, (uintptr_t)_dram, cbmem_top());
 }
 
 struct device_operations qemu_riscv_pci_domain_ops = {
