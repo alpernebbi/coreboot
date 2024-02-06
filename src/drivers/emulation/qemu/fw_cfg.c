@@ -5,16 +5,29 @@
 #include <string.h>
 #include <smbios.h>
 #include <console/console.h>
+#if CONFIG(CPU_QEMU_X86)
 #include <arch/io.h>
+#else
+#include <arch/mmio.h>
+#endif
 #include <acpi/acpi.h>
 #include <commonlib/endian.h>
 #include <fw_cfg.h>
 #include <fw_cfg_if.h>
 
-#define FW_CFG_PORT_CTL       0x0510
-#define FW_CFG_PORT_DATA      0x0511
-#define FW_CFG_DMA_ADDR_HIGH  0x0514
-#define FW_CFG_DMA_ADDR_LOW   0x0518
+#if !CONFIG(CPU_QEMU_X86) && CONFIG_QEMU_FW_CFG_BASE_ADDRESS == 0
+#error "CONFIG_QEMU_FW_CFG_BASE_ADDRESS undefined!"
+#endif
+
+#define FW_CFG_X86_PORT_CTL       0x0510
+#define FW_CFG_X86_PORT_DATA      0x0511
+#define FW_CFG_X86_DMA_ADDR_HIGH  0x0514
+#define FW_CFG_X86_DMA_ADDR_LOW   0x0518
+
+#define FW_CFG_CTL_ADDR       (CONFIG_QEMU_FW_CFG_BASE_ADDRESS + 8)
+#define FW_CFG_DATA_ADDR      (CONFIG_QEMU_FW_CFG_BASE_ADDRESS + 0)
+#define FW_CFG_DMA_ADDR_HIGH  (CONFIG_QEMU_FW_CFG_BASE_ADDRESS + 16)
+#define FW_CFG_DMA_ADDR_LOW   (CONFIG_QEMU_FW_CFG_BASE_ADDRESS + 20)
 
 static int fw_cfg_detected;
 static uint8_t fw_ver;
@@ -45,16 +58,27 @@ static void fw_cfg_select(uint16_t entry)
 {
 	if (fw_ver & FW_CFG_VERSION_DMA)
 		fw_cfg_dma(FW_CFG_DMA_CTL_SELECT | entry << 16, NULL, 0);
-	else
-		outw(entry, FW_CFG_PORT_CTL);
+	else {
+#if CONFIG(CPU_QEMU_X86)
+		outw(entry, FW_CFG_X86_PORT_CTL);
+#else
+		write16((void *)FW_CFG_CTL_ADDR, be16_to_cpu(entry));
+#endif
+	}
 }
 
 static void fw_cfg_read(void *dst, int dstlen)
 {
 	if (fw_ver & FW_CFG_VERSION_DMA)
 		fw_cfg_dma(FW_CFG_DMA_CTL_READ, dst, dstlen);
-	else
-		insb(FW_CFG_PORT_DATA, dst, dstlen);
+	else {
+#if CONFIG(CPU_QEMU_X86)
+		insb(FW_CFG_X86_PORT_DATA, dst, dstlen);
+#else
+		for (int i = 0; i < dstlen; i++)
+			((uint8_t *)dst)[i] = read8((void *)FW_CFG_DATA_ADDR);
+#endif
+	}
 }
 
 void fw_cfg_get(uint16_t entry, void *dst, int dstlen)
@@ -528,10 +552,17 @@ static void fw_cfg_dma(int control, void *buf, int len)
 	dma_desc_addr_hi = sizeof(uintptr_t) > sizeof(uint32_t)
 				? (uint32_t)(dma_desc_addr >> 32) : 0;
 
+#if CONFIG(CPU_QEMU_X86)
 	// Skip writing high half if unnecessary.
 	if (dma_desc_addr_hi)
-		outl(be32_to_cpu(dma_desc_addr_hi), FW_CFG_DMA_ADDR_HIGH);
-	outl(be32_to_cpu(dma_desc_addr_lo), FW_CFG_DMA_ADDR_LOW);
+		outl(be32_to_cpu(dma_desc_addr_hi), FW_CFG_X86_DMA_ADDR_HIGH);
+	outl(be32_to_cpu(dma_desc_addr_lo), FW_CFG_X86_DMA_ADDR_LOW);
+#else
+	// Skip writing high half if unnecessary.
+	if (dma_desc_addr_hi)
+		write32((void *)FW_CFG_DMA_ADDR_HIGH, be32_to_cpu(dma_desc_addr_hi));
+	write32((void *)FW_CFG_DMA_ADDR_LOW, be32_to_cpu(dma_desc_addr_lo));
+#endif
 
 	while (be32_to_cpu(dma.control) & ~FW_CFG_DMA_CTL_ERROR)
 		;
