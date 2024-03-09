@@ -39,13 +39,14 @@ size_t probe_ramsize(const uintptr_t dram_start, const size_t probe_size)
 	ssize_t i;
 	size_t msb = 0;
 	size_t discovered = 0;
+	size_t probe_safe = MIN(probe_size, (UINTPTR_MAX - dram_start) / MiB);
 
 	static size_t saved_result;
 	if (saved_result)
 		return saved_result;
 
 	/* Find the MSB + 1. */
-	size_t tmp = probe_size;
+	size_t tmp = probe_safe;
 	do {
 		msb++;
 	} while (tmp >>= 1);
@@ -55,7 +56,7 @@ size_t probe_ramsize(const uintptr_t dram_start, const size_t probe_size)
 
 	/* Compact binary search.  */
 	for (i = msb; i >= 0; i--) {
-		if ((discovered | (1ULL << i)) > probe_size)
+		if ((discovered | (1ULL << i)) > probe_safe)
 			continue;
 		if (probe_mb(dram_start, (discovered | (1ULL << i))))
 			discovered |= (1ULL << i);
