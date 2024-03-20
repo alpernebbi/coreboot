@@ -70,10 +70,13 @@ config RISCV_WORKING_HARTID
 
 config DRAM_SIZE_MB
 	int
-	default 16383
+	default 14335 if ARCH_RISCV_RV64
+	default 10239 if ARCH_RISCV_RV32
 	help
-	  Qemu maps MMIO at ALIGN_UP(top_of_mem, 16 * GiB)
-	  To avoid confusing the dram probing algorithm, avoid large dram sizes (16G - 1m)
+	  QEMU maps MMIO at ALIGN_UP(top_of_mem, 16 * GiB) on RV64.
+	  To avoid confusing the DRAM probing algorithm, avoid large DRAM sizes.
+	  DRAM start is at 2G, so we can safely probe up to 16G - 1M - 2G of RAM.
+	  On RV32, MMIO is at 12 GiB, so we have to limit to 12G - 1M - 2G.
 
 config OPENSBI_PLATFORM
 	string
