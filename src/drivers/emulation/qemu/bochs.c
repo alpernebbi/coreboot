@@ -115,7 +115,7 @@ static void bochs_init_linear_fb(struct device *dev)
 
 	/* MMIO bar supported since qemu 3.0+ */
 	res_io = probe_resource(dev, PCI_BASE_ADDRESS_2);
-	if (((dev->class >> 8) == PCI_CLASS_DISPLAY_VGA) ||
+	if ((CONFIG(CPU_QEMU_X86) && ((dev->class >> 8) == PCI_CLASS_DISPLAY_VGA)) ||
 	    !res_io || !(res_io->flags & IORESOURCE_MEM)) {
 		printk(BIOS_DEBUG, "QEMU VGA: Using legacy VGA\n");
 		res_io = &res_legacy;
