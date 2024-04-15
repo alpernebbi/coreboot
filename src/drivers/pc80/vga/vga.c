@@ -341,6 +341,13 @@ vga_textmode_init(void)
 	vga_fb_clear();
 	vga_font_8x16_load();
 
+	const unsigned char *test_str = (const unsigned char *)"[VGA TEXT]";
+	vga_write_text(VGA_TEXT_LEFT, 0, test_str);
+	vga_write_text(VGA_TEXT_RIGHT, 0, test_str);
+	vga_write_text(VGA_TEXT_CENTER, VGA_LINES / 2, test_str);
+	vga_write_text(VGA_TEXT_LEFT, VGA_LINES - 1, test_str);
+	vga_write_text(VGA_TEXT_RIGHT, VGA_LINES - 1, test_str);
+
 	vga_sr_mask(0x00, 0x02, 0x02); /* take us out of reset */
 	vga_cr_mask(0x17, 0x80, 0x80); /* sync! */
 }
