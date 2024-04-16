@@ -287,7 +287,8 @@ vga_write_text(enum VGA_TEXT_ALIGNMENT alignment, unsigned int line,
 	       const unsigned char *ustring)
 {
 	const char *string = (const char *)ustring;
-	char str[VGA_COLUMNS * VGA_LINES] = {0};
+	static char str[VGA_COLUMNS * VGA_LINES] = {0};
+	memset(str, 0, sizeof(str) - 1);
 	memcpy(str, string, strnlen(string, sizeof(str) - 1));
 
 	char *token = strtok(str, "\n");
