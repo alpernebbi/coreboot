@@ -314,6 +314,51 @@ vga_write_text(enum VGA_TEXT_ALIGNMENT alignment, unsigned int line,
 	}
 }
 
+static void
+vga_textmode_testscreen(void)
+{
+	uint32_t i;
+	uint8_t c, x, y, row, col;
+	uint32_t *p = (uint32_t *)VGA_FB;
+	const unsigned char *test_str = (const unsigned char *)"-- VGA TEXT MODE --\n";
+
+	vga_write_text(VGA_TEXT_CENTER, 1, test_str);
+
+	for (c = 0x00; c < 0xFF; c++) {
+		x = 8 + (c & 0xF) * 2;
+		y = 5 + (c >> 4);
+		col = (c & 0x0F);
+		row = (c & 0xF0) >> 4;
+
+		i = y * VGA_COLUMNS + x;
+		p[i] = (p[i] & 0xFFFF0000) |
+		       (0x0 << 12) | (0xF << 8) | c;
+
+		i = y * VGA_COLUMNS + (34 + x);
+		p[i] = (p[i] & 0xFFFF0000) |
+		       (col << 12) | (row << 8) | 0x04;
+
+		i = 3 * VGA_COLUMNS + x;
+		p[i] = (p[i] & 0xFFFF0000) |
+		       (0x0 << 12) | (0xF << 8) |
+		       ((col < 10) ? (0x30 + col) : (0x41 + col % 10));
+
+		i = 3 * VGA_COLUMNS + (34 + x);
+		p[i] = (p[i] & 0xFFFF0000) |
+		       (0x0 << 12) | (0xF << 8) |
+		       ((col < 10) ? (0x30 +col) : (0x41 + col % 10));
+
+		i = y * VGA_COLUMNS + 5;
+		p[i] = (p[i] & 0xFFFF0000) |
+		       (0x0 << 12) | (0xF << 8) |
+		       ((row < 10) ? (0x30 + row) : (0x41 + row % 10));
+	}
+
+	vga_write_text(VGA_TEXT_CENTER, VGA_LINES - 2, test_str);
+
+	mdelay(5000);
+}
+
 /*
  * set up everything to get a basic 80x25 textmode.
  */
@@ -342,6 +387,10 @@ vga_textmode_init(void)
 	vga_frame_set(0, 0);
 
 	vga_fb_init();
+	vga_fb_clear();
+	vga_font_8x16_load();
+
+	vga_textmode_testscreen();
 	vga_fb_clear();
 	vga_font_8x16_load();
 
