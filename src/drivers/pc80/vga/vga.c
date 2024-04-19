@@ -345,24 +345,6 @@ vga_textmode_init(void)
 	vga_fb_clear();
 	vga_font_8x16_load();
 
-	const unsigned char *test_str = (const unsigned char *)"[VGA TEXT]";
-	vga_write_text(VGA_TEXT_LEFT, 0, test_str);
-	vga_write_text(VGA_TEXT_RIGHT, 0, test_str);
-	vga_write_text(VGA_TEXT_CENTER, VGA_LINES / 2, test_str);
-	vga_write_text(VGA_TEXT_LEFT, VGA_LINES - 1, test_str);
-	vga_write_text(VGA_TEXT_RIGHT, VGA_LINES - 1, test_str);
-
-	uint8_t x, y;
-	uint8_t *p = (uint8_t *)VGA_FB;
-	for (uint16_t i = 0; i < VGA_LINES * VGA_COLUMNS * 4; i += 4) {
-		x = (i/4) % VGA_COLUMNS;
-		y = ((i/4) / VGA_COLUMNS) % VGA_LINES;
-		p[i] = x + y;
-		p[i+1] = y / 2;
-		/* p[i+2] = x; */
-		/* p[i+3] = y; */
-	}
-
 	vga_sr_mask(0x00, 0x02, 0x02); /* take us out of reset */
 	vga_cr_mask(0x17, 0x80, 0x80); /* sync! */
 }
