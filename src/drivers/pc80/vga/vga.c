@@ -264,7 +264,7 @@ vga_write_at_offset(unsigned int line, unsigned int offset, const char *string)
 	if (!string)
 		return;
 
-	unsigned short *p = (unsigned short *)VGA_FB + (VGA_COLUMNS * line) + offset;
+	uint32_t *p = (uint32_t *)VGA_FB + (VGA_COLUMNS * line) + offset;
 	size_t i, len = strlen(string);
 
 	for (i = 0; i < (VGA_COLUMNS - offset); i++) {
