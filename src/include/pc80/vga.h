@@ -3,7 +3,7 @@
 #ifndef VGA_H
 #define VGA_H
 
-#define VGA_FB 0x3C000000
+#define VGA_FB 0x7F000000
 #define VGA_FB_SIZE 0x4000 /* char + attr = word sized so 0x8000 / 2 */
 #define VGA_COLUMNS 80
 #define VGA_LINES 25
