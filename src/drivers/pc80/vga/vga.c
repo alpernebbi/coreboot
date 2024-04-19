@@ -350,13 +350,6 @@ vga_textmode_init(void)
 	vga_write_text(VGA_TEXT_LEFT, VGA_LINES - 1, test_str);
 	vga_write_text(VGA_TEXT_RIGHT, VGA_LINES - 1, test_str);
 
-	uint32_t *p = (uint32_t *)VGA_FB;
-	for (uint16_t i = 0; i < UINT16_MAX; i++) {
-		p[i % (VGA_COLUMNS * VGA_LINES)] = i;
-		if (i % (VGA_COLUMNS * VGA_LINES) == 0)
-			mdelay(500);
-	}
-
 	vga_sr_mask(0x00, 0x02, 0x02); /* take us out of reset */
 	vga_cr_mask(0x17, 0x80, 0x80); /* sync! */
 }
