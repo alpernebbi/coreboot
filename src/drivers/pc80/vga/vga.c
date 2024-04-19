@@ -351,6 +351,7 @@ vga_textmode_init(void)
 	vga_write_text(VGA_TEXT_LEFT, VGA_LINES - 1, test_str);
 	vga_write_text(VGA_TEXT_RIGHT, VGA_LINES - 1, test_str);
 
+	mdelay(1000);
 	uint8_t x, y;
 	uint8_t *p = (uint8_t *)VGA_FB;
 	for (uint16_t i = 0; i < VGA_LINES * VGA_COLUMNS * 4; i += 4) {
