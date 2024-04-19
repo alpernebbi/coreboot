@@ -189,12 +189,11 @@ vga_font_8x16_load(void)
 	vga_sr_write(0x02, 0x04);
 	p = (unsigned char *)VGA_FB;
 	for (i = 0; i < count; i++) {
-		for (j = 0; j < 64; j++) {
-			if (j < 32)
-				*p = vga_font_8x16[i][j/2];
+		for (j = 0; j < 32; j++) {
+			if (j < height)
+				*p = vga_font_8x16[i][j];
 			else
 				*p = 0x00;
-			p++;
 			p++;
 		}
 	}
@@ -264,7 +263,7 @@ vga_write_at_offset(unsigned int line, unsigned int offset, const char *string)
 	if (!string)
 		return;
 
-	uint32_t *p = (uint32_t *)VGA_FB + (VGA_COLUMNS * line) + offset;
+	unsigned short *p = (unsigned short *)VGA_FB + (VGA_COLUMNS * line) + offset;
 	size_t i, len = strlen(string);
 
 	for (i = 0; i < (VGA_COLUMNS - offset); i++) {
@@ -351,7 +350,6 @@ vga_textmode_init(void)
 	vga_write_text(VGA_TEXT_LEFT, VGA_LINES - 1, test_str);
 	vga_write_text(VGA_TEXT_RIGHT, VGA_LINES - 1, test_str);
 
-	mdelay(1000);
 	uint8_t x, y;
 	uint8_t *p = (uint8_t *)VGA_FB;
 	for (uint16_t i = 0; i < VGA_LINES * VGA_COLUMNS * 4; i += 4) {
