@@ -168,7 +168,7 @@ vga_mode_set(int hdisplay, int hblankstart, int hsyncstart, int hsyncend,
 static void
 vga_font_8x16_load(void)
 {
-	unsigned char *p;
+	uint32_t *p;
 	size_t i, j;
 	unsigned char sr2, sr4, gr5, gr6;
 
@@ -187,11 +187,11 @@ vga_font_8x16_load(void)
 
 	/* plane 2 */
 	vga_sr_write(0x02, 0x04);
-	p = (unsigned char *)VGA_FB;
+	p = (uint32_t *)VGA_FB;
 	for (i = 0; i < count; i++) {
 		for (j = 0; j < 32; j++) {
 			if (j < height)
-				*p = vga_font_8x16[i][j];
+				*p = vga_font_8x16[i][j] << 16;
 			else
 				*p = 0x00;
 			p++;
@@ -263,14 +263,16 @@ vga_write_at_offset(unsigned int line, unsigned int offset, const char *string)
 	if (!string)
 		return;
 
-	unsigned short *p = (unsigned short *)VGA_FB + (VGA_COLUMNS * line) + offset;
+	uint32_t *p = (uint32_t *)VGA_FB + (VGA_COLUMNS * line) + offset;
 	size_t i, len = strlen(string);
 
 	for (i = 0; i < (VGA_COLUMNS - offset); i++) {
 		if (i < len)
-			p[i] = 0x0F00 | (unsigned char)string[i];
+			p[i] = (p[i] & 0xFFFF0000) |
+			       0x0F00 | (unsigned char)string[i];
 		else
-			p[i] = 0x0F00;
+			p[i] = (p[i] & 0xFFFF0000) |
+			       0x0F00;
 	}
 }
 
