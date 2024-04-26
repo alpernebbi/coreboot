@@ -8,5 +8,6 @@ int fw_cfg_check_file(FWCfgFile *file, const char *name);
 int fw_cfg_max_cpus(void);
 unsigned long fw_cfg_smbios_tables(int *handle, unsigned long *current);
 uintptr_t fw_cfg_tolud(void);
+void fw_cfg_dma(int control, void *buf, int len);
 
 #endif /* FW_CFG_H */

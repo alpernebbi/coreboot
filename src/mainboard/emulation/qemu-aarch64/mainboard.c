@@ -5,6 +5,7 @@
 #include <device/device.h>
 #include <bootmem.h>
 #include <mainboard/addressmap.h>
+#include <drivers/emulation/qemu/ramfb.h>
 
 void bootmem_platform_add_ranges(void)
 {
@@ -13,6 +14,7 @@ void bootmem_platform_add_ranges(void)
 
 static void mainboard_enable(struct device *dev)
 {
+	fw_cfg_ramfb_init();
 }
 
 struct chip_operations mainboard_ops = {

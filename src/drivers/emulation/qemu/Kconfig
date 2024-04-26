@@ -26,6 +26,15 @@ config DRIVERS_EMULATION_QEMU_CIRRUS
 	help
 	   VGA driver for qemu emulated cirrus svga card.
 
+config DRIVERS_EMULATION_QEMU_RAMFB
+	bool "ramfb driver"
+	default y
+	depends on VENDOR_EMULATION
+	depends on MAINBOARD_DO_NATIVE_VGA_INIT
+	select HAVE_LINEAR_FRAMEBUFFER
+	help
+	   Graphics driver for qemu emulated ramfb device.
+
 config DRIVERS_EMULATION_QEMU_XRES
 	int "qemu vga xres"
 	default 800

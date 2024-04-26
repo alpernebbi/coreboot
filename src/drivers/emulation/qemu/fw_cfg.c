@@ -29,8 +29,6 @@
 static int fw_cfg_detected;
 static uint8_t fw_ver;
 
-static void fw_cfg_dma(int control, void *buf, int len);
-
 static int fw_cfg_present(void)
 {
 	static const char qsig[] = "QEMU";
@@ -88,10 +86,11 @@ static int fw_cfg_find_file(FWCfgFile *file, const char *name)
 
 	for (int i = 0; i < count; i++) {
 		fw_cfg_read(file, sizeof(*file));
+		printk(BIOS_INFO, "QEMU: firmware config: Found '%s' (size=%#x, select=%#x)\n",
+				   file->name, be32_to_cpu(file->size), be16_to_cpu(file->select));
 		if (strcmp(file->name, name) == 0) {
 			file->size = be32_to_cpu(file->size);
 			file->select = be16_to_cpu(file->select);
-			printk(BIOS_INFO, "QEMU: firmware config: Found '%s'\n", name);
 			return 0;
 		}
 	}
@@ -528,7 +527,7 @@ void smbios_system_set_uuid(u8 *uuid)
  * Configure DMA setup
  */
 
-static void fw_cfg_dma(int control, void *buf, int len)
+void fw_cfg_dma(int control, void *buf, int len)
 {
 	volatile FwCfgDmaAccess dma;
 	uintptr_t dma_desc_addr;
