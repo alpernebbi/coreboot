@@ -36,6 +36,9 @@ config BOARD_SPECIFIC_OPTIONS
 	select ARCH_RAMSTAGE_RISCV
 	select RISCV_USE_ARCH_TIMER
 
+config PCI_IOBASE
+	default 0x3000000
+
 config MEMLAYOUT_LD_FILE
 	string
 	default "src/mainboard/emulation/qemu-riscv/memlayout.ld"
