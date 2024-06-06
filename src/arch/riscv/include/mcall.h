@@ -6,11 +6,11 @@
 // NOTE: this is the size of struct hls below. A static_assert would be
 // nice to have.
 #if __riscv_xlen == 64
-#define HLS_SIZE 88
+#define HLS_SIZE 96
 #endif
 
 #if __riscv_xlen == 32
-#define HLS_SIZE 52
+#define HLS_SIZE 64
 #endif
 
 /* We save 37 registers, currently. */
@@ -48,7 +48,7 @@ struct hls {
 	uint64_t *time;
 	void *fdt;
 	struct blocker entry;
-};
+} __aligned(16);
 
 _Static_assert(
 	sizeof(struct hls) == HLS_SIZE,
