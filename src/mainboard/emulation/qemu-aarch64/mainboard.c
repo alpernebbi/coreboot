@@ -9,7 +9,24 @@
 
 void bootmem_platform_add_ranges(void)
 {
+
+	/* Flash memory */
+	bootmem_add_range(0x0, 0x08000000, BM_MEM_RESERVED);
+
+	/* Miscellaneous device I/O */
+	bootmem_add_range(0x08000000, 0x06000000, BM_MEM_RESERVED);
 	bootmem_add_range((uintptr_t)_bl31, REGION_SIZE(bl31), BM_MEM_BL31);
+	bootmem_add_range(0x0f000000, 0x31000000, BM_MEM_RESERVED);
+
+	/* PCI */
+	bootmem_add_range(VIRT_PCIE_LOW_MMIO_BASE,
+			  VIRT_PCIE_LOW_MMIO_LIMIT - VIRT_PCIE_LOW_MMIO_BASE,
+			  BM_MEM_RESERVED);
+	bootmem_add_range(VIRT_PCIE_LOW_MMIO_LIMIT, 0x10000, /* VIRT_PCIE_PIO */
+			  BM_MEM_RESERVED);
+	bootmem_add_range(VIRT_PCIE_HIGH_MMIO_BASE,
+			  VIRT_PCIE_HIGH_MMIO_LIMIT - VIRT_PCIE_HIGH_MMIO_BASE,
+			  BM_MEM_RESERVED);
 }
 
 static void mainboard_enable(struct device *dev)
