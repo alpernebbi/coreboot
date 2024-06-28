@@ -92,8 +92,7 @@ void rk_display_init(struct device *dev, u32 lcdbase, unsigned long fb_size)
 		conf->framebuffer_bits_per_pixel, 0);
 	rkvop_mode_set(conf->vop_id, &edid, detected_mode);
 
-	rkvop_prepare(conf->vop_id, &edid);
-	rkvop_enable(conf->vop_id, lcdbase);
+	rkvop_enable(conf->vop_id, lcdbase, &edid);
 
 	switch (detected_mode) {
 	case VOP_MODE_HDMI:

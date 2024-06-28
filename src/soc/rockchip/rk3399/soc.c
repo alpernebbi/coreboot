@@ -27,7 +27,8 @@ static void soc_read_resources(struct device *dev)
 static void soc_init(struct device *dev)
 {
 	if (CONFIG(MAINBOARD_DO_NATIVE_VGA_INIT) && display_init_required())
-		rk_display_init(dev);
+		rk_display_init(dev, (uintptr_t)_framebuffer,
+				REGION_SIZE(framebuffer));
 	else
 		printk(BIOS_INFO, "Display initialization disabled.\n");
 

@@ -1,5 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
 
+#include <arch/cache.h>
 #include <arch/mmu.h>
 #include <device/mmio.h>
 #include <console/console.h>
@@ -32,28 +33,36 @@ static void reset_edp(void)
 	printk(BIOS_WARNING, "Retrying EDP initialization.\n");
 }
 
-void rk_display_init(struct device *dev)
+void rk_display_init(struct device *dev, uintptr_t lcdbase,
+		     unsigned long fb_size)
 {
 	struct edid edid;
+	uint32_t val;
 	struct soc_rockchip_rk3399_config *conf = dev->chip_info;
+	uintptr_t lower = ALIGN_DOWN(lcdbase, MiB);
+	uintptr_t upper = ALIGN_UP(lcdbase + fb_size, MiB);
 	enum vop_modes detected_mode = VOP_MODE_UNKNOWN;
 	const struct mipi_panel_data *panel_data = NULL;
 	int retry_count_init = 0;
 	int retry_count_edp_prepare = 0;
 
-	/* let's use vop0 in rk3399 */
-	uint32_t vop_id = 0;
+	printk(BIOS_DEBUG, "LCD framebuffer @%p\n", (void *)(lcdbase));
+	memset((void *)lcdbase, 0, fb_size);	/* clear the framebuffer */
+	dcache_clean_invalidate_by_mva((void *)lower, upper - lower);
+	mmu_config_range((void *)lower, upper - lower, UNCACHED_MEM);
 
 	switch (conf->vop_mode) {
 	case VOP_MODE_NONE:
 		return;
 	case VOP_MODE_EDP:
 		printk(BIOS_DEBUG, "Attempting to set up EDP display.\n");
-		rkclk_configure_vop_aclk(vop_id, 200 * MHz);
+		rkclk_configure_vop_aclk(conf->vop_id, 200 * MHz);
 		rkclk_configure_edp(25 * MHz);
 
-		/* select edp signal from vop0 */
-		write32(&rk3399_grf->soc_con20, RK_CLRBITS(1 << 5));
+		/* select edp signal from vop0(big) or vop1(little) */
+		val = (conf->vop_id == 1) ? RK_SETBITS(1 << 5) :
+					    RK_CLRBITS(1 << 5);
+		write32(&rk3399_grf->soc_con20, val);
 
 		/* select edp clk from SoC internal 24M crystal, otherwise,
 		 * it will source from edp's 24M clock (that depends on
@@ -82,7 +91,7 @@ retry_edp:
 		printk(BIOS_DEBUG, "Attempting to setup MIPI display.\n");
 
 		rkclk_configure_mipi();
-		rkclk_configure_vop_aclk(vop_id, 200 * MHz);
+		rkclk_configure_vop_aclk(conf->vop_id, 200 * MHz);
 
 		/*
 		 * disable tx0 turnrequest, turndisable,
@@ -126,7 +135,7 @@ retry_edp:
 		return;
 	}
 
-	if (rkclk_configure_vop_dclk(vop_id,
+	if (rkclk_configure_vop_dclk(conf->vop_id,
 				     edid.mode.pixel_clock * KHz)) {
 		printk(BIOS_WARNING, "config vop err\n");
 		return;
@@ -134,9 +143,9 @@ retry_edp:
 
 	edid_set_framebuffer_bits_per_pixel(&edid,
 		conf->framebuffer_bits_per_pixel, 0);
-	rkvop_mode_set(vop_id, &edid, detected_mode);
+	rkvop_mode_set(conf->vop_id, &edid, detected_mode);
 
-	rkvop_prepare(vop_id, &edid);
+	rkvop_enable(conf->vop_id, lcdbase, &edid);
 
 	switch (detected_mode) {
 	case VOP_MODE_MIPI:
@@ -159,5 +168,5 @@ retry_edp:
 		break;
 	}
 	mainboard_power_on_backlight();
-	fb_new_framebuffer_info_from_edid(&edid, (uintptr_t)0);
+	fb_new_framebuffer_info_from_edid(&edid, (uintptr_t)lcdbase);
 }

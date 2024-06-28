@@ -7,6 +7,7 @@
 #include <soc/vop.h>	/* for vop_modes enum used in devicetree.cb */
 
 struct soc_rockchip_rk3399_config {
+	u32 vop_id;
 	u32 framebuffer_bits_per_pixel;
 	u32 vop_mode;
 };
