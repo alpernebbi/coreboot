@@ -163,6 +163,10 @@ retry_edp:
 			printk(BIOS_ERR, "EDP preparation failed.");
 			return;
 		}
+		if (rk_edp_enable()) {
+			printk(BIOS_WARNING, "edp enable err\n");
+			return;
+		}
 		break;
 	default:
 		break;
