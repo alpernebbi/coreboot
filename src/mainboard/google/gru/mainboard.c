@@ -324,6 +324,7 @@ static void setup_usb(int port)
 
 static void mainboard_init(struct device *dev)
 {
+	google_chromeec_pwm_set(1, 0);
 	configure_sdmmc();
 	configure_emmc();
 	configure_codec();
@@ -363,6 +364,8 @@ void mainboard_power_on_backlight(void)
 
 	if (CONFIG(BOARD_GOOGLE_GRU))
 		prepare_backlight_i2c();
+
+	google_chromeec_pwm_set(1, 80);
 }
 
 static struct panel_init_command innolux_p097pfg_init_cmds[] = {

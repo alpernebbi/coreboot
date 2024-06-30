@@ -92,6 +92,20 @@ uint8_t google_chromeec_calc_checksum(const uint8_t *data, int size)
 	return (uint8_t)(csum & 0xff);
 }
 
+int google_chromeec_pwm_set(int index, int percent)
+{
+	const struct ec_params_pwm_set_duty params = {
+		.duty = (EC_PWM_MAX_DUTY / 100) * (percent % 101),
+		.pwm_type = EC_PWM_TYPE_GENERIC,
+		.index = index,
+	};
+
+	if (ec_cmd_pwm_set_duty(PLAT_EC, &params) != 0)
+		return -1;
+
+	return 0;
+}
+
 int google_chromeec_kbbacklight(int percent)
 {
 	const struct ec_params_pwm_set_keyboard_backlight params = {
