@@ -51,6 +51,8 @@ static uint32_t bootmem_to_lb_tag(const enum bootmem_type tag)
 		return LB_MEM_RESERVED;
 	case BM_MEM_TABLE:
 		return LB_MEM_TABLE;
+	case BM_MEM_MMIO:
+		return LB_MEM_MMIO;
 	case BM_MEM_SOFT_RESERVED:
 		return LB_MEM_SOFT_RESERVED;
 	default:
@@ -142,6 +144,7 @@ static const struct range_strings type_strings[] = {
 	{ BM_MEM_VENDOR_RSVD, "VENDOR RESERVED" },
 	{ BM_MEM_BL31, "BL31" },
 	{ BM_MEM_OPENSBI, "OPENSBI" },
+	{ BM_MEM_MMIO, "MMIO" },
 	{ BM_MEM_TABLE, "CONFIGURATION TABLES" },
 	{ BM_MEM_SOFT_RESERVED, "SOFT RESERVED" },
 	{ BM_MEM_RAMSTAGE, "RAMSTAGE" },

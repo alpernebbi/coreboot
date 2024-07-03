@@ -13,6 +13,10 @@
 
 void bootmem_platform_add_ranges(void)
 {
+	bootmem_add_range(0xf8000000, 0x8000000, BM_MEM_MMIO);
+	/* slows display down but avoids visual artifacts */
+	bootmem_add_range((uintptr_t)_framebuffer, REGION_SIZE(framebuffer),
+			  BM_MEM_MMIO);
 	bootmem_add_range((uintptr_t)_pmu_sram, REGION_SIZE(pmu_sram),
 			  BM_MEM_BL31);
 	bootmem_add_range((uintptr_t)_bl31_sram, REGION_SIZE(bl31_sram),
