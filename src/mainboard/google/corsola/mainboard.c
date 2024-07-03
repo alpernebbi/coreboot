@@ -11,6 +11,7 @@
 #include <soc/msdc.h>
 #include <soc/spm.h>
 #include <soc/usb.h>
+#include <symbols.h>
 
 #include "gpio.h"
 #include "panel.h"
@@ -71,8 +72,11 @@ static void mainboard_init(struct device *dev)
 		register_reset_to_bl31(GPIO_RESET.id, true);
 
 	if (display_init_required()) {
-		if (mtk_display_init() < 0)
+		memset(_framebuffer, 0x00, REGION_SIZE(framebuffer));
+		if (mtk_display_init((uintptr_t)_framebuffer, REGION_SIZE(framebuffer)) < 0)
 			printk(BIOS_ERR, "%s: Failed to init display\n", __func__);
+		gpio_output(GPIO_AP_EDP_BKLTEN, 1);
+		gpio_output(GPIO_BL_PWM_1V8, 1);
 	} else {
 		if (CONFIG(BOARD_GOOGLE_STARYU_COMMON)) {
 			mtk_i2c_bus_init(PMIC_I2C_BUS, I2C_SPEED_FAST);

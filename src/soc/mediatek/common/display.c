@@ -50,7 +50,7 @@ __weak int mtk_dsi_init(u32 mode_flags, u32 format, u32 lanes,
 	return -1;
 }
 
-int mtk_display_init(void)
+int mtk_display_init(uintptr_t fb_base, unsigned long fb_size)
 {
 	struct edid edid;
 	struct fb_info *info;
@@ -119,8 +119,8 @@ int mtk_display_init(void)
 
 	edid_set_framebuffer_bits_per_pixel(&edid, 32, 0);
 
-	mtk_ddp_mode_set(&edid, panel->disp_path);
-	info = fb_new_framebuffer_info_from_edid(&edid, (uintptr_t)0);
+	mtk_ddp_mode_set(&edid, panel->disp_path, fb_base);
+	info = fb_new_framebuffer_info_from_edid(&edid, fb_base);
 	if (info)
 		fb_set_orientation(info, panel->orientation);
 
